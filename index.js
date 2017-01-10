@@ -45,7 +45,7 @@ function sendMail(title, description) {
       });
       server.send({
         text: title + '\n\n' + description + '\n\n' + url,
-        from: 'Packt-watcher <packt-watcher@thou-shalt-not-reply.com>',
+        from: `Packt-watcher <${to}>`,
         to: to,
         subject: 'Now available: ' + title
       }, (err, message) => {
