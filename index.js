@@ -62,6 +62,6 @@ function sendMail(config, title, description) {
   }
 }
 
-Promise.all([readConfig('config.json.bak'), scrape(url)]).then(data => {
+Promise.all([readConfig('config.json'), scrape(url)]).then(data => {
   sendMail(data[0], data[1].title, data[1].description);
 });
