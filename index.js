@@ -13,50 +13,55 @@ const selector = '#deal-of-the-day > div > div > div.dotd-main-book-summary.floa
 const descSelector = '#deal-of-the-day > div > div > div.dotd-main-book-summary.float-left > div:nth-child(4)';
 const url = 'https://www.packtpub.com/packt/offers/free-learning';
 
-scrape(url, sendMail);
-
-function scrape(url, callback) {
-  request(url, (err, res, body) => {
-    if (err) throw err;
-    else {
-      let $ = cheerio.load(body);
-      let title = $( selector ).text().trim();
-      let description = $( descSelector ).text().trim();
-      callback(title, description);
-    }
+const scrape = (url) => {
+  return new Promise((resolve, reject) => {
+    request(url, (err, res, body) => {
+      if (err) {
+        reject('Error!');
+      } else {
+        let $ = cheerio.load(body);
+        let title = $( selector ).text().trim();
+        let description = $( descSelector ).text().trim();
+        resolve({'title': title, 'description': description});
+      }
+    });
   });
-}
+};
 
-function readConfig(configFile, callback) {
-  fs.readFile(configFile, 'utf-8', (err, res) => {
-    res = JSON.parse(res);
-    callback(res.user, res.password, res.host, res.to);
+const readConfig = (configFile) => {
+  return new Promise((resolve, reject) => {
+    fs.readFile(configFile, 'utf-8', (err, res) => {
+      if (err) reject('Error reading configfile.');
+      else {
+        resolve(JSON.parse(res));
+      }
+    });
   });
-}
+};
 
-function sendMail(title, description) {
+function sendMail(config, title, description) {
   if (title) {
-    readConfig('config.json', (user, pass, host, to) => {
-      const server = email.server.connect({
-        user: user,
-        password: pass,
-        host: host,
-        ssl: true
-      });
-      server.send({
-        text: title + '\n\n' + description + '\n\n' + url,
-        from: `Packt-watcher <${to}>`,
-        to: to,
-        subject: 'Now available: ' + title
-      }, (err, message) => {
-        if (err) throw err;
-        else {
-          console.log('Message sent.');
-        }
-      });
+    email.server.connect({
+      user: config.user,
+      password: config.pass,
+      host: config.host,
+      ssl: true
+    }).send({
+      text: title + '\n\n' + description + '\n\n' + url,
+      from: `Packt-watcher <${config.to}>`,
+      to: config.to,
+      subject: 'Now available: ' + title
+    }, (err) => {
+      if (err) throw err;
+      else {
+        console.log('Message sent.');
+      }
     });
   } else {
-    console.log('No titles available today.')
+    console.log('No titles available today.');
   }
 }
 
+Promise.all([readConfig('config.json.bak'), scrape(url)]).then(data => {
+  sendMail(data[0], data[1].title, data[1].description);
+});
